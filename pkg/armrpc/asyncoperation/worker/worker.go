@@ -193,7 +193,11 @@ func (w *AsyncRequestProcessWorker) Start(ctx context.Context) error {
 			// 1. The same message is delivered twice in multiple instances.
 			// 2. provisioningState is not matched between resource and operationStatuses
 
-			dup, err := w.isDuplicated(reqCtx, asyncCtrl.StorageClient(), op.ResourceID, op.OperationID)
+			rID := op.ResourceID
+			if strings.Contains(op.ResourceID, ":put") || strings.Contains(op.ResourceID, ":delete") {
+				rID = strings.Split(op.ResourceID, ":")[0] + uuid.New().String()
+			}
+			dup, err := w.isDuplicated(reqCtx, asyncCtrl.StorageClient(), rID, op.OperationID)
 			if err != nil {
 				opLogger.Error(err, "failed to check potential deduplication.")
 				return
@@ -349,12 +353,14 @@ func (w *AsyncRequestProcessWorker) updateResourceAndOperationStatus(ctx context
 
 	opType, _ := v1.ParseOperationType(req.OperationType)
 
-	err = updateResourceState(ctx, sc, rID.String(), state)
-	if err != nil && !(opType.Method == http.MethodDelete && errors.Is(&store.ErrNotFound{ID: rID.String()}, err)) {
-		logger.Error(err, "failed to update the provisioningState in resource.")
-		return err
+	// TODO - Fix??
+	if rID.PlaneScope() != "/planes/aws/aws" {
+		err = updateResourceState(ctx, sc, rID.String(), state)
+		if err != nil && !(opType.Method == http.MethodDelete && errors.Is(&store.ErrNotFound{ID: rID.String()}, err)) {
+			logger.Error(err, "failed to update the provisioningState in resource.")
+			return err
+		}
 	}
-
 	// Otherwise we update the operationStatus to the result.
 	now := time.Now().UTC()
 	err = w.sm.Update(ctx, rID, req.OperationID, state, &now, opErr)

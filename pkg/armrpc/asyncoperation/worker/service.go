@@ -19,6 +19,7 @@ package worker
 import (
 	"context"
 
+	armrpcv1 "github.com/radius-project/radius/pkg/armrpc/api/v1"
 	manager "github.com/radius-project/radius/pkg/armrpc/asyncoperation/statusmanager"
 	"github.com/radius-project/radius/pkg/armrpc/hostoptions"
 	"github.com/radius-project/radius/pkg/kubeutil"
@@ -71,6 +72,11 @@ func (s *Service) Init(ctx context.Context) error {
 	s.RequestQueue, err = qp.GetClient(ctx)
 	if err != nil {
 		return err
+	}
+
+	// TODO - Fix??
+	if s.Options.Config.Env.RoleLocation == "" {
+		s.Options.Config.Env.RoleLocation = armrpcv1.LocationGlobal
 	}
 	s.OperationStatusManager = manager.New(opSC, s.RequestQueue, s.ProviderName, s.Options.Config.Env.RoleLocation)
 	s.Controllers = NewControllerRegistry(s.StorageProvider)

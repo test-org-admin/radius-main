@@ -174,6 +174,11 @@ func (c *APIServerClient) Get(ctx context.Context, id string, options ...store.G
 
 	resourceName := resourceName(parsed)
 
+	if strings.Contains(resourceName, "x3aput") || strings.Contains(resourceName, "x3adelete") {
+		// AWS resource
+		return nil, &store.ErrNotFound{ID: id}
+	}
+
 	resource := ucpv1alpha1.Resource{}
 	err = c.client.Get(ctx, runtimeclient.ObjectKey{Namespace: c.namespace, Name: resourceName}, &resource)
 	if err != nil && apierrors.IsNotFound(err) {

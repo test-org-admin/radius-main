@@ -22,11 +22,12 @@ import v1 "github.com/radius-project/radius/pkg/armrpc/api/v1"
 // AWSResource is not a tracked resource, so it does not implement ResourceDataModel.
 // However need to implement the methods to satisfy the interface.
 type AWSResource struct {
+	Properties map[string]any `json:"properties,omitempty"`
 }
 
 // GetSystemData is not implemented for AWS proxy resource.
 func (a *AWSResource) GetSystemData() *v1.SystemData {
-	return nil
+	return &v1.SystemData{}
 }
 
 // GetBaseResource is not implemented for AWS proxy resource.

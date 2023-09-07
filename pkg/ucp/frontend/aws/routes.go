@@ -117,8 +117,12 @@ func (m *Module) Initialize(ctx context.Context) (http.Handler, error) {
 			Path:          "/{resourceName}",
 			Method:        v1.OperationPut,
 			OperationType: &v1.OperationType{Type: OperationTypeAWSResource, Method: v1.OperationPut},
-			ControllerFactory: func(opts controller.Options) (controller.Controller, error) {
-				return awsproxy_ctrl.NewCreateOrUpdateAWSResource(opts, m.AWSClients)
+			// },
+			ControllerFactory: func(opt controller.Options) (controller.Controller, error) {
+				return defaultoperation.NewDefaultAsyncPut(opt, controller.ResourceOptions[datamodel.AWSResource]{
+					RequestConverter:  converter.AWSDataModelFromVersioned,
+					ResponseConverter: converter.AWSDataModelToVersioned,
+				})
 			},
 		},
 		{
@@ -153,7 +157,10 @@ func (m *Module) Initialize(ctx context.Context) (http.Handler, error) {
 			Method:        v1.OperationPutImperative,
 			OperationType: &v1.OperationType{Type: OperationTypeAWSResource, Method: v1.OperationPutImperative},
 			ControllerFactory: func(opt controller.Options) (controller.Controller, error) {
-				return awsproxy_ctrl.NewCreateOrUpdateAWSResourceWithPost(opt, m.AWSClients)
+				return defaultoperation.NewDefaultAsyncPut(opt, controller.ResourceOptions[datamodel.AWSResource]{
+					RequestConverter:  converter.AWSDataModelFromVersioned,
+					ResponseConverter: converter.AWSDataModelToVersioned,
+				})
 			},
 		},
 		{
@@ -234,9 +241,10 @@ func (m *Module) Initialize(ctx context.Context) (http.Handler, error) {
 	}...)
 
 	ctrlOpts := controller.Options{
-		Address:      m.options.Address,
-		PathBase:     m.options.PathBase,
-		DataProvider: m.options.DataProvider,
+		Address:       m.options.Address,
+		PathBase:      m.options.PathBase,
+		DataProvider:  m.options.DataProvider,
+		StatusManager: m.options.StatusManager,
 	}
 
 	for _, h := range handlerOptions {

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -88,11 +89,20 @@ func (c *Operation[P, T]) GetResourceFromRequest(ctx context.Context, req *http.
 
 	serviceCtx := v1.ARMRequestContextFromContext(ctx)
 
-	dm, err := c.resourceOptions.RequestConverter(content, serviceCtx.APIVersion)
-	if err != nil {
-		return nil, err
+	if c.resourceOptions.RequestConverter != nil {
+		dm, err := c.resourceOptions.RequestConverter(content, serviceCtx.APIVersion)
+		if err != nil {
+			return nil, err
+		}
+		return dm, nil
+	} else {
+		var converted T
+		err = json.Unmarshal(content, &converted)
+		if err != nil {
+			return nil, err
+		}
+		return &converted, nil
 	}
-	return dm, nil
 }
 
 // GetResource is the helper to get the resource via storage client.
@@ -112,6 +122,8 @@ func (c *Operation[P, T]) GetResource(ctx context.Context, id resources.ID) (out
 		err = nil
 	}
 	return
+
+	return nil, "", nil
 }
 
 // SaveResource is the helper to save the resource via storage client.

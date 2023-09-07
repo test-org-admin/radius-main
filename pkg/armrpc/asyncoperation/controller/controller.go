@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/radius-project/radius/pkg/corerp/backend/deployment"
+	"github.com/radius-project/radius/pkg/ucp/aws"
 	"github.com/radius-project/radius/pkg/ucp/dataprovider"
 	"github.com/radius-project/radius/pkg/ucp/store"
 
@@ -42,6 +43,9 @@ type Options struct {
 
 	// GetDeploymentProcessor is the factory function to create core rp DeploymentProcessor instance.
 	GetDeploymentProcessor func() deployment.DeploymentProcessor
+
+	// AWSClients // TODO: figure out how to add this
+	AWSClients *aws.Clients
 }
 
 // Controller is an interface to implement async operation controller.

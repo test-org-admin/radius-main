@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 
+	manager "github.com/radius-project/radius/pkg/armrpc/asyncoperation/statusmanager"
 	"github.com/radius-project/radius/pkg/sdk"
 	"github.com/radius-project/radius/pkg/ucp/dataprovider"
 	"github.com/radius-project/radius/pkg/ucp/hostoptions"
@@ -73,4 +74,7 @@ type Options struct {
 
 	// UCPConnection is the connection used to communicate with UCP APIs.
 	UCPConnection sdk.Connection
+
+	// StatusManager is the status manager used to update the status of resources.
+	StatusManager manager.StatusManager
 }

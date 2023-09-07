@@ -48,6 +48,7 @@ import (
 	"github.com/radius-project/radius/swagger"
 
 	"github.com/go-chi/chi/v5"
+	manager "github.com/radius-project/radius/pkg/armrpc/asyncoperation/statusmanager"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 )
@@ -84,6 +85,7 @@ type Service struct {
 	storageProvider dataprovider.DataStorageProvider
 	queueProvider   *queueprovider.QueueProvider
 	secretProvider  *secretprovider.SecretProvider
+	statusManager   manager.StatusManager
 }
 
 // DefaultModules returns a list of default modules that will be registered with the router.
@@ -120,6 +122,19 @@ func (s *Service) Initialize(ctx context.Context) (*http.Server, error) {
 	s.queueProvider = queueprovider.New(s.options.ProviderName, s.options.QueueProviderOptions)
 	s.secretProvider = secretprovider.NewSecretProvider(s.options.SecretProviderOptions)
 
+	// TODO: Figure out the right value for the queue name
+	opSC, err := s.storageProvider.GetStorageClient(ctx, "UCP/operationstatuses")
+	if err != nil {
+		return nil, err
+	}
+	qClient, err := s.queueProvider.GetClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO - Remove hardcoding
+	s.statusManager = manager.New(opSC, qClient, "ucp", s.options.Location)
+
 	specLoader, err := validator.LoadSpec(ctx, "ucp", swagger.SpecFilesUCP, []string{s.options.PathBase}, "")
 	if err != nil {
 		return nil, err
@@ -135,6 +150,7 @@ func (s *Service) Initialize(ctx context.Context) (*http.Server, error) {
 		SecretProvider: s.secretProvider,
 		SpecLoader:     specLoader,
 		UCPConnection:  s.options.UCPConnection,
+		StatusManager:  s.statusManager,
 	}
 
 	modules := DefaultModules(moduleOptions)

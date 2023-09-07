@@ -142,24 +142,42 @@ func (p *CreateOrUpdateAWSResourceWithPost) Run(ctx context.Context, w http.Resp
 
 		// Call update only if the patch is not empty
 		if len(patch) > 0 {
-			marshaled, err := json.Marshal(&patch)
+			// Enque async update operation
+			serviceCtx := v1.ARMRequestContextFromContext(ctx)
+			newResource, err := p.GetResourceFromRequest(ctx, req)
 			if err != nil {
-				return ucp_aws.HandleAWSError(err)
+				return nil, err
 			}
 
-			response, err := p.awsClients.CloudControl.UpdateResource(ctx, &cloudcontrol.UpdateResourceInput{
-				TypeName:      to.Ptr(serviceCtx.ResourceTypeInAWSFormat()),
-				Identifier:    aws.String(awsResourceIdentifier),
-				PatchDocument: aws.String(string(marshaled)),
-			}, cloudControlOpts...)
+			_, etag, err := p.GetResource(ctx, serviceCtx.ResourceID)
 			if err != nil {
-				return ucp_aws.HandleAWSError(err)
+				return nil, err
 			}
 
-			operation, err = uuid.Parse(*response.ProgressEvent.RequestToken)
-			if err != nil {
-				return ucp_aws.HandleAWSError(err)
+			if r, err := p.PrepareAsyncOperation(ctx, newResource, v1.ProvisioningStateAccepted, p.AsyncOperationTimeout(), &etag); r != nil || err != nil {
+				return r, err
 			}
+
+			return p.ConstructAsyncResponse(ctx, req.Method, etag, newResource)
+
+			// marshaled, err := json.Marshal(&patch)
+			// if err != nil {
+			// 	return ucp_aws.HandleAWSError(err)
+			// }
+
+			// response, err := p.awsClients.CloudControl.UpdateResource(ctx, &cloudcontrol.UpdateResourceInput{
+			// 	TypeName:      to.Ptr(serviceCtx.ResourceTypeInAWSFormat()),
+			// 	Identifier:    aws.String(awsResourceIdentifier),
+			// 	PatchDocument: aws.String(string(marshaled)),
+			// }, cloudControlOpts...)
+			// if err != nil {
+			// 	return ucp_aws.HandleAWSError(err)
+			// }
+
+			// operation, err = uuid.Parse(*response.ProgressEvent.RequestToken)
+			// if err != nil {
+			// 	return ucp_aws.HandleAWSError(err)
+			// }
 		} else {
 			// mark provisioning state as succeeded here
 			// and return 200, telling the deployment engine that the resource has already been created
