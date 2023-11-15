@@ -23,7 +23,18 @@ on:
     - cron: "30 0,12 * * 0,6"
   # Dispatch on external events
   repository_dispatch:
-    types: [functional-tests, de-functional-test]
+    types: [de-functional-test]
+  push:
+    branches:
+      - main
+      - release/*
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+      - features/*
+      - release/*
 
 env:
   # Go version
@@ -73,7 +84,7 @@ jobs:
     env:
       DE_IMAGE: 'ghcr.io/radius-project/deployment-engine'
       DE_TAG: 'latest'
-      FUNCTIONAL_TEST_APP_ID: 43818055
+      FUNCTIONAL_TEST_APP_ID: 428394
     outputs:
       REL_VERSION: ${{ steps.gen-id.outputs.REL_VERSION }}
       UNIQUE_ID: ${{ steps.gen-id.outputs.UNIQUE_ID }}
@@ -91,32 +102,20 @@ jobs:
           app_id: ${{ env.FUNCTIONAL_TEST_APP_ID }}
           private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
       - name: Set up checkout target (scheduled)
+        with:
+            github-token: ${{ steps.get_installation_token.outputs.token }}
         if: github.event_name == 'schedule'
         run: |
           echo "CHECKOUT_REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "CHECKOUT_REF=refs/heads/main" >> $GITHUB_ENV
       - name: Set up checkout target (pull_request)
+        with:
+            github-token: ${{ steps.get_installation_token.outputs.token }}
         if: github.event_name == 'pull_request'
         run: |
             echo "CHECKOUT_REPO=${{ github.repository }}" >> $GITHUB_ENV
             echo "CHECKOUT_REF=${{ github.ref }}" >> $GITHUB_ENV
             echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-      - name: Set up checkout target (repository_dispatch from /ok-to-test)
-        if: github.event_name == 'repository_dispatch'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GH_RAD_CI_BOT_PAT }}
-          script: |
-            const testPayload = context.payload.client_payload;
-            if (testPayload && testPayload.command === `ok-to-test`) {
-              var fs = require('fs');
-              // Set environment variables
-              fs.appendFileSync(process.env.GITHUB_ENV,
-                `CHECKOUT_REPO=${testPayload.pull_head_repo}\n`+
-                `CHECKOUT_REF=${testPayload.pull_head_ref}\n`+
-                `PR_NUMBER=${testPayload.issue.number}`
-              );
-            }
       - name: Set DE image and tag (repository_dispatch from de-functional-test)
         if: github.event_name == 'repository_dispatch'
         uses: actions/github-script@v6
@@ -164,6 +163,7 @@ jobs:
         if: env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           hide: true
@@ -208,12 +208,15 @@ jobs:
         if: env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
           message: |
             :hourglass: Building Radius and pushing container images for functional tests...
       - name: Build and Push container images
+        with:
+          github-token: ${{ steps.get_installation_token.outputs.token }}
         run: |
           make build && make docker-build && make docker-push
         env:
@@ -229,6 +232,7 @@ jobs:
         if: success() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -238,6 +242,7 @@ jobs:
         if: failure() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -247,6 +252,7 @@ jobs:
         if: env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -269,6 +275,7 @@ jobs:
         if: success() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -278,6 +285,7 @@ jobs:
         if: failure() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -296,6 +304,7 @@ jobs:
           - os: ubuntu-latest-m
             name: datastoresrp
     runs-on: ${{ matrix.os }}
+    environment: functional-tests
     env:
       UNIQUE_ID: ${{ needs.build.outputs.UNIQUE_ID }}
       REL_VERSION: ${{ needs.build.outputs.REL_VERSION }}
@@ -308,6 +317,12 @@ jobs:
       DE_IMAGE: ${{ needs.build.outputs.DE_IMAGE }}
       DE_TAG: ${{ needs.build.outputs.DE_TAG }}
     steps:
+      - name: Login as the github app
+        uses: tibdex/github-app-token@v1
+        id: get_installation_token
+        with: 
+          app_id: ${{ env.FUNCTIONAL_TEST_APP_ID }}
+          private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -350,6 +365,7 @@ jobs:
       - uses: marocchino/sticky-pull-request-comment@v2
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -442,6 +458,7 @@ jobs:
         if: failure() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -481,6 +498,7 @@ jobs:
         if: failure() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -575,6 +593,7 @@ jobs:
         if: success() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
@@ -584,6 +603,7 @@ jobs:
         if: failure() && env.PR_NUMBER != ''
         continue-on-error: true
         with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           header: teststatus-${{ github.run_id }}
           number: ${{ env.PR_NUMBER }}
           append: true
