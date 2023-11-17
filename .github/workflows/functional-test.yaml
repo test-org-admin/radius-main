@@ -105,198 +105,198 @@ jobs:
             echo "CHECKOUT_REPO=${{ github.repository }}" >> $GITHUB_ENV
             echo "CHECKOUT_REF=${{ github.ref }}" >> $GITHUB_ENV
             echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-      - name: Use custom actions
-        uses: actions/checkout@v3
-      - name: 'Download PR data artifacts'
-        if: github.event_name == 'workflow_run'
-        uses: ./.github/actions/download-pr-data-artifact
-        id: get-pr-number
-      - name: 'Set PR context (workflow_run)'
-        if: github.event_name == 'workflow_run'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const payload = context.payload.workflow_run;
-            let fs = require('fs');
-            // Set environment variables
-            fs.appendFileSync(process.env.GITHUB_ENV,
-              `CHECKOUT_REPO=${payload.head_repository.full_name}\n`+
-              `CHECKOUT_REF=${payload.head_sha}\n` +
-              `PR_NUMBER=${{ steps.get-pr-number.outputs.pr_number }}\n`);
-      - name: Set DE image and tag (repository_dispatch from de-functional-test)
-        if: github.event_name == 'repository_dispatch'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GH_RAD_CI_BOT_PAT }}
-          script: |
-            const clientPayload = context.payload.client_payload;
-            if (clientPayload && clientPayload.event_type === `de-functional-test`) {
-              var fs = require('fs');
-              // Set environment variables
-              fs.appendFileSync(process.env.GITHUB_ENV,
-                `DE_IMAGE=${clientPayload.de_image}\n`+
-                `DE_TAG=${clientPayload.de_tag}\n`+
-                `CHECKOUT_REPO=${{ github.repository }}\n`+
-                `CHECKOUT_REF=refs/heads/main`
-              );
-            }
-      - name: Check out code
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ env.CHECKOUT_REPO }}
-          ref: ${{ env.CHECKOUT_REF }}
-      - name: Set up Go ${{ env.GOVER }}
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ env.GOVER }}
-      - name: Generate ID for release
-        id: gen-id
-        run: |
-          BASE_STR="RADIUS|${GITHUB_SHA}|${GITHUB_SERVER_URL}|${GITHUB_REPOSITORY}|${GITHUB_RUN_ID}|${GITHUB_RUN_ATTEMPT}"
-          UNIQUE_ID=$(echo $BASE_STR | sha1sum | head -c 10)
-          echo "REL_VERSION=pr-${UNIQUE_ID}" >> $GITHUB_ENV
-          
-          # Set output variables to be used in the other jobs
-          echo "REL_VERSION=pr-${UNIQUE_ID}" >> $GITHUB_OUTPUT
-          echo "UNIQUE_ID=${UNIQUE_ID}" >> $GITHUB_OUTPUT
-          echo "CHECKOUT_REPO=${{ env.CHECKOUT_REPO }}" >> $GITHUB_OUTPUT
-          echo "CHECKOUT_REF=${{ env.CHECKOUT_REF }}" >> $GITHUB_OUTPUT
-          echo "AZURE_TEST_RESOURCE_GROUP=radtest-${UNIQUE_ID}" >> $GITHUB_OUTPUT
-          echo "RAD_CLI_ARTIFACT_NAME=rad_cli_linux_amd64" >> $GITHUB_OUTPUT
-          echo "PR_NUMBER=${{ env.PR_NUMBER }}" >> $GITHUB_OUTPUT
-          echo "DE_IMAGE=${{ env.DE_IMAGE }}" >> $GITHUB_OUTPUT
-          echo "DE_TAG=${{ env.DE_TAG }}" >> $GITHUB_OUTPUT
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          hide: true
-          hide_classify: 'OUTDATED'
-          message: |
-            ## Radius functional test overview
-
-            :mag: **[Go to test action run](${{ env.ACTION_LINK }})**
-
-            | Name | Value |
-            |------|-------|
-            |**Repository** | ${{ steps.gen-id.outputs.CHECKOUT_REPO }} |
-            |**Commit ref** | ${{ steps.gen-id.outputs.CHECKOUT_REF }} |
-            |**Unique ID** | ${{ steps.gen-id.outputs.UNIQUE_ID }} |
-            |**Image tag** | ${{ steps.gen-id.outputs.REL_VERSION }} |
-
-            <details>
-            <summary> Click here to see the list of tools in the current test run</summary>
-
-            * gotestsum ${{ env.GOTESTSUM_VER }}
-            * KinD: ${{ env.KIND_VER }}
-            * Dapr: ${{ env.DAPR_VER }}
-            * Azure KeyVault CSI driver: ${{ env.AZURE_KEYVAULT_CSI_DRIVER_VER }}
-            * Azure Workload identity webhook: ${{ env.AZURE_WORKLOAD_IDENTITY_WEBHOOK_VER }}
-            * Bicep recipe location `${{ env.BICEP_RECIPE_REGISTRY }}/test/functional/shared/recipes/<name>:${{ env.REL_VERSION }}`
-            * Terraform recipe location `${{ env.TF_RECIPE_MODULE_SERVER_URL }}/<name>.zip` (in cluster)
-            * applications-rp test image location: `${{ env.CONTAINER_REGISTRY }}/applications-rp:${{ env.REL_VERSION }}`
-            * controller test image location: `${{ env.CONTAINER_REGISTRY }}/controller:${{ env.REL_VERSION }}`
-            * ucp test image location: `${{ env.CONTAINER_REGISTRY }}/ucpd:${{ env.REL_VERSION }}`
-            * deployment-engine test image location: `${{ env.DE_IMAGE }}:${{ env.DE_TAG }}`
-
-            </details>
-            
-            ## Test Status
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :hourglass: Building Radius and pushing container images for functional tests...
-      # - name: Build and Push container images
-      #   run: |
-      #     make build && make docker-build && make docker-push
-      #   env:
-      #     DOCKER_REGISTRY: ${{ env.CONTAINER_REGISTRY }}
-      #     DOCKER_TAG_VERSION: ${{ env.REL_VERSION }}
-      # - name: Upload CLI binary
-      #   uses: actions/upload-artifact@v3
+      # - name: Use custom actions
+      #   uses: actions/checkout@v3
+      # - name: 'Download PR data artifacts'
+      #   if: github.event_name == 'workflow_run'
+      #   uses: ./.github/actions/download-pr-data-artifact
+      #   id: get-pr-number
+      # - name: 'Set PR context (workflow_run)'
+      #   if: github.event_name == 'workflow_run'
+      #   uses: actions/github-script@v6
       #   with:
-      #     name: ${{ steps.gen-id.outputs.RAD_CLI_ARTIFACT_NAME }}
-      #     path: |
-      #       ./dist/linux_amd64/release/rad
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: success() && env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :white_check_mark: Container images build succeeded
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: failure() && env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :x: Container images build failed
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :hourglass: Publishing Bicep Recipes for functional tests...
-      - name: Publish Bicep Test Recipes
-        run: |
-          mkdir ./bin
-          cp ./dist/linux_amd64/release/rad ./bin/rad
-          chmod +x ./bin/rad
-          export PATH=$GITHUB_WORKSPACE/bin:$PATH
-          which rad || { echo "cannot find rad"; exit 1; }
-          rad bicep download
-          rad version
-          make publish-test-bicep-recipes
-        env:
-          BICEP_RECIPE_REGISTRY: ${{ env.BICEP_RECIPE_REGISTRY }}
-          BICEP_RECIPE_TAG_VERSION: ${{ env.REL_VERSION }}
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: success() && env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :white_check_mark: Recipe publishing succeeded
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: failure() && env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :x: Test recipe publishing failed
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     script: |
+      #       const payload = context.payload.workflow_run;
+      #       let fs = require('fs');
+      #       // Set environment variables
+      #       fs.appendFileSync(process.env.GITHUB_ENV,
+      #         `CHECKOUT_REPO=${payload.head_repository.full_name}\n`+
+      #         `CHECKOUT_REF=${payload.head_sha}\n` +
+      #         `PR_NUMBER=${{ steps.get-pr-number.outputs.pr_number }}\n`);
+      # - name: Set DE image and tag (repository_dispatch from de-functional-test)
+      #   if: github.event_name == 'repository_dispatch'
+      #   uses: actions/github-script@v6
+      #   with:
+      #     github-token: ${{ secrets.GH_RAD_CI_BOT_PAT }}
+      #     script: |
+      #       const clientPayload = context.payload.client_payload;
+      #       if (clientPayload && clientPayload.event_type === `de-functional-test`) {
+      #         var fs = require('fs');
+      #         // Set environment variables
+      #         fs.appendFileSync(process.env.GITHUB_ENV,
+      #           `DE_IMAGE=${clientPayload.de_image}\n`+
+      #           `DE_TAG=${clientPayload.de_tag}\n`+
+      #           `CHECKOUT_REPO=${{ github.repository }}\n`+
+      #           `CHECKOUT_REF=refs/heads/main`
+      #         );
+      #       }
+      # - name: Check out code
+      #   uses: actions/checkout@v3
+      #   with:
+      #     repository: ${{ env.CHECKOUT_REPO }}
+      #     ref: ${{ env.CHECKOUT_REF }}
+      # - name: Set up Go ${{ env.GOVER }}
+      #   uses: actions/setup-go@v4
+      #   with:
+      #     go-version: ${{ env.GOVER }}
+      # - name: Generate ID for release
+      #   id: gen-id
+      #   run: |
+      #     BASE_STR="RADIUS|${GITHUB_SHA}|${GITHUB_SERVER_URL}|${GITHUB_REPOSITORY}|${GITHUB_RUN_ID}|${GITHUB_RUN_ATTEMPT}"
+      #     UNIQUE_ID=$(echo $BASE_STR | sha1sum | head -c 10)
+      #     echo "REL_VERSION=pr-${UNIQUE_ID}" >> $GITHUB_ENV
+          
+      #     # Set output variables to be used in the other jobs
+      #     echo "REL_VERSION=pr-${UNIQUE_ID}" >> $GITHUB_OUTPUT
+      #     echo "UNIQUE_ID=${UNIQUE_ID}" >> $GITHUB_OUTPUT
+      #     echo "CHECKOUT_REPO=${{ env.CHECKOUT_REPO }}" >> $GITHUB_OUTPUT
+      #     echo "CHECKOUT_REF=${{ env.CHECKOUT_REF }}" >> $GITHUB_OUTPUT
+      #     echo "AZURE_TEST_RESOURCE_GROUP=radtest-${UNIQUE_ID}" >> $GITHUB_OUTPUT
+      #     echo "RAD_CLI_ARTIFACT_NAME=rad_cli_linux_amd64" >> $GITHUB_OUTPUT
+      #     echo "PR_NUMBER=${{ env.PR_NUMBER }}" >> $GITHUB_OUTPUT
+      #     echo "DE_IMAGE=${{ env.DE_IMAGE }}" >> $GITHUB_OUTPUT
+      #     echo "DE_TAG=${{ env.DE_TAG }}" >> $GITHUB_OUTPUT
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     hide: true
+      #     hide_classify: 'OUTDATED'
+      #     message: |
+      #       ## Radius functional test overview
+
+      #       :mag: **[Go to test action run](${{ env.ACTION_LINK }})**
+
+      #       | Name | Value |
+      #       |------|-------|
+      #       |**Repository** | ${{ steps.gen-id.outputs.CHECKOUT_REPO }} |
+      #       |**Commit ref** | ${{ steps.gen-id.outputs.CHECKOUT_REF }} |
+      #       |**Unique ID** | ${{ steps.gen-id.outputs.UNIQUE_ID }} |
+      #       |**Image tag** | ${{ steps.gen-id.outputs.REL_VERSION }} |
+
+      #       <details>
+      #       <summary> Click here to see the list of tools in the current test run</summary>
+
+      #       * gotestsum ${{ env.GOTESTSUM_VER }}
+      #       * KinD: ${{ env.KIND_VER }}
+      #       * Dapr: ${{ env.DAPR_VER }}
+      #       * Azure KeyVault CSI driver: ${{ env.AZURE_KEYVAULT_CSI_DRIVER_VER }}
+      #       * Azure Workload identity webhook: ${{ env.AZURE_WORKLOAD_IDENTITY_WEBHOOK_VER }}
+      #       * Bicep recipe location `${{ env.BICEP_RECIPE_REGISTRY }}/test/functional/shared/recipes/<name>:${{ env.REL_VERSION }}`
+      #       * Terraform recipe location `${{ env.TF_RECIPE_MODULE_SERVER_URL }}/<name>.zip` (in cluster)
+      #       * applications-rp test image location: `${{ env.CONTAINER_REGISTRY }}/applications-rp:${{ env.REL_VERSION }}`
+      #       * controller test image location: `${{ env.CONTAINER_REGISTRY }}/controller:${{ env.REL_VERSION }}`
+      #       * ucp test image location: `${{ env.CONTAINER_REGISTRY }}/ucpd:${{ env.REL_VERSION }}`
+      #       * deployment-engine test image location: `${{ env.DE_IMAGE }}:${{ env.DE_TAG }}`
+
+      #       </details>
+            
+      #       ## Test Status
+      # - name: Login to GitHub Container Registry
+      #   uses: docker/login-action@v2
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :hourglass: Building Radius and pushing container images for functional tests...
+      # # - name: Build and Push container images
+      # #   run: |
+      # #     make build && make docker-build && make docker-push
+      # #   env:
+      # #     DOCKER_REGISTRY: ${{ env.CONTAINER_REGISTRY }}
+      # #     DOCKER_TAG_VERSION: ${{ env.REL_VERSION }}
+      # # - name: Upload CLI binary
+      # #   uses: actions/upload-artifact@v3
+      # #   with:
+      # #     name: ${{ steps.gen-id.outputs.RAD_CLI_ARTIFACT_NAME }}
+      # #     path: |
+      # #       ./dist/linux_amd64/release/rad
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: success() && env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :white_check_mark: Container images build succeeded
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: failure() && env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :x: Container images build failed
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :hourglass: Publishing Bicep Recipes for functional tests...
+      # - name: Publish Bicep Test Recipes
+      #   run: |
+      #     mkdir ./bin
+      #     cp ./dist/linux_amd64/release/rad ./bin/rad
+      #     chmod +x ./bin/rad
+      #     export PATH=$GITHUB_WORKSPACE/bin:$PATH
+      #     which rad || { echo "cannot find rad"; exit 1; }
+      #     rad bicep download
+      #     rad version
+      #     make publish-test-bicep-recipes
+      #   env:
+      #     BICEP_RECIPE_REGISTRY: ${{ env.BICEP_RECIPE_REGISTRY }}
+      #     BICEP_RECIPE_TAG_VERSION: ${{ env.REL_VERSION }}
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: success() && env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :white_check_mark: Recipe publishing succeeded
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: failure() && env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :x: Test recipe publishing failed
   tests:
     name: Run ${{ matrix.name }} functional tests
     needs: build
