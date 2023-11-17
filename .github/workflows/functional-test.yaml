@@ -333,6 +333,7 @@ jobs:
       - name: Echo env variables
         run: |
           echo $PR_NUMBER
+          echo "from build step: ${{ needs.build.outputs.PR_NUMBER }}"
           echo $CHECKOUT_REPO
           echo $CHECKOUT_REF
       - uses: LouisBrunner/checks-action@v1.6.1
