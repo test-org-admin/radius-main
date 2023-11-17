@@ -332,9 +332,9 @@ jobs:
           private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
       - name: Echo env variables
         run: |
-          echo $env.PR_NUMBER
-          echo $env.CHECKOUT_REPO
-          echo $env.CHECKOUT_REF
+          echo $PR_NUMBER
+          echo $CHECKOUT_REPO
+          echo $CHECKOUT_REF
       - uses: LouisBrunner/checks-action@v1.6.1
         if: always()
         with:
