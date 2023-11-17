@@ -4,7 +4,7 @@ linters:
   - forbidigo
 linters-settings:
   forbidigo:
-    # Forbid the following identifiers (list of regexp)
+    # Forbid the foasfsdfllowing identifiers (list of regexp)
     #
     # Add a comment to the offending line with '//nolint:forbidigo' to suppress the rule if
     # you're working inside the main() function.
