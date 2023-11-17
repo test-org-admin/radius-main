@@ -330,6 +330,15 @@ jobs:
         with: 
           app_id: ${{ env.FUNCTIONAL_TEST_APP_ID }}
           private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
+      - uses: LouisBrunner/checks-action@v1.6.1
+        if: always()
+        with:
+          token: ${{ steps.get_installation_token.outputs.token }}
+          name: 'Functional Test Run'
+          status: in_progress
+          repo: ${{ github.repository }}
+          sha: ${{ env.CHECKOUT_REF }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -514,15 +523,6 @@ jobs:
       - name: Publish Terraform test recipes
         run: |
           make publish-test-terraform-recipes
-      - uses: LouisBrunner/checks-action@v1.6.1
-        if: always()
-        with:
-          token: ${{ steps.get_installation_token.outputs.token }}
-          name: 'Approved Functional Test Run'
-          status: in_progress
-          repo: ${{ github.repository }}
-          sha: ${{ env.CHECKOUT_REF }}
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - name: Run functional tests
         run: |
           # Ensure rad cli is in path before running tests.
@@ -578,13 +578,13 @@ jobs:
         if: always()
         with:
           token: ${{ steps.get_installation_token.outputs.token }}
-          name: 'Functional test run (after approval)'
+          name: 'Functional Test Run'
           repo: ${{ github.repository }}
           sha: ${{ env.CHECKOUT_REF }}
           status: completed
           conclusion: ${{ job.status }}
           output: |
-            {"summary":"Functional Test run completed. See links for more information.","title":"Approved Functional Test Run"}
+            {"summary":"Functional Test run completed. See links for more information.","title":"Functional Test Run"}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       - uses: marocchino/sticky-pull-request-comment@v2
         if: success() && env.PR_NUMBER != ''
