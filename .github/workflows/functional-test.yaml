@@ -105,25 +105,25 @@ jobs:
             echo "CHECKOUT_REPO=${{ github.repository }}" >> $GITHUB_ENV
             echo "CHECKOUT_REF=${{ github.ref }}" >> $GITHUB_ENV
             echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_ENV
-      # - name: Use custom actions
-      #   uses: actions/checkout@v3
-      # - name: 'Download PR data artifacts'
-      #   if: github.event_name == 'workflow_run'
-      #   uses: ./.github/actions/download-pr-data-artifact
-      #   id: get-pr-number
-      # - name: 'Set PR context (workflow_run)'
-      #   if: github.event_name == 'workflow_run'
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       const payload = context.payload.workflow_run;
-      #       let fs = require('fs');
-      #       // Set environment variables
-      #       fs.appendFileSync(process.env.GITHUB_ENV,
-      #         `CHECKOUT_REPO=${payload.head_repository.full_name}\n`+
-      #         `CHECKOUT_REF=${payload.head_sha}\n` +
-      #         `PR_NUMBER=${{ steps.get-pr-number.outputs.pr_number }}\n`);
+      - name: Use custom actions
+        uses: actions/checkout@v3
+      - name: 'Download PR data artifacts'
+        if: github.event_name == 'workflow_run'
+        uses: ./.github/actions/download-pr-data-artifact
+        id: get-pr-number
+      - name: 'Set PR context (workflow_run)'
+        if: github.event_name == 'workflow_run'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const payload = context.payload.workflow_run;
+            let fs = require('fs');
+            // Set environment variables
+            fs.appendFileSync(process.env.GITHUB_ENV,
+              `CHECKOUT_REPO=${payload.head_repository.full_name}\n`+
+              `CHECKOUT_REF=${payload.head_sha}\n` +
+              `PR_NUMBER=${{ steps.get-pr-number.outputs.pr_number }}\n`);
       # - name: Set DE image and tag (repository_dispatch from de-functional-test)
       #   if: github.event_name == 'repository_dispatch'
       #   uses: actions/github-script@v6
@@ -330,6 +330,11 @@ jobs:
         with: 
           app_id: ${{ env.FUNCTIONAL_TEST_APP_ID }}
           private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
+      - name: Echo env variables
+        run: |
+          echo $env.PR_NUMBER
+          echo $env.CHECKOUT_REPO
+          echo $env.CHECKOUT_REF
       - uses: LouisBrunner/checks-action@v1.6.1
         if: always()
         with:
