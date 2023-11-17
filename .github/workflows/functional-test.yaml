@@ -574,18 +574,14 @@ jobs:
       #   with:
       #     name: ${{ matrix.name }}_container_logs
       #     path: ./${{ env.RADIUS_CONTAINER_LOG_BASE }}
-      - uses: LouisBrunner/checks-action@v1.6.1
+      - name: Delete azure resource group - ${{ env.AZURE_TEST_RESOURCE_GROUP }}
         if: always()
-        with:
-          token: ${{ steps.get_installation_token.outputs.token }}
-          name: 'Functional Test Run'
-          repo: ${{ github.repository }}
-          sha: ${{ env.CHECKOUT_REF }}
-          status: completed
-          conclusion: ${{ job.status }}
-          output: |
-            {"summary":"Functional Test run completed. See links for more information.","title":"Functional Test Run"}
-          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # if deletion fails, purge workflow will purge the resource group and its resources later.
+          az group delete \
+            --subscription ${{ secrets.INTEGRATION_TEST_SUBSCRIPTION_ID }} \
+            --name ${{ env.AZURE_TEST_RESOURCE_GROUP }} \
+            --yes --verbose
       - uses: marocchino/sticky-pull-request-comment@v2
         if: success() && env.PR_NUMBER != ''
         continue-on-error: true
@@ -606,14 +602,18 @@ jobs:
           append: true
           message: |
             :x: ${{ matrix.name }} functional test failed. Please check [the logs](${{ env.ACTION_LINK }}) for more details
-      - name: Delete azure resource group - ${{ env.AZURE_TEST_RESOURCE_GROUP }}
+      - uses: LouisBrunner/checks-action@v1.6.1
         if: always()
-        run: |
-          # if deletion fails, purge workflow will purge the resource group and its resources later.
-          az group delete \
-            --subscription ${{ secrets.INTEGRATION_TEST_SUBSCRIPTION_ID }} \
-            --name ${{ env.AZURE_TEST_RESOURCE_GROUP }} \
-            --yes --verbose
+        with:
+          token: ${{ steps.get_installation_token.outputs.token }}
+          name: 'Functional Test Run'
+          repo: ${{ github.repository }}
+          sha: ${{ env.CHECKOUT_REF }}
+          status: completed
+          conclusion: ${{ job.status }}
+          output: |
+            {"summary":"Functional Test run completed. See links for more information.","title":"Functional Test Run"}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   report-failure:
     name: Report test failure
     needs: [build, tests]
