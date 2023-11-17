@@ -222,18 +222,18 @@ jobs:
           append: true
           message: |
             :hourglass: Building Radius and pushing container images for functional tests...
-      - name: Build and Push container images
-        run: |
-          make build && make docker-build && make docker-push
-        env:
-          DOCKER_REGISTRY: ${{ env.CONTAINER_REGISTRY }}
-          DOCKER_TAG_VERSION: ${{ env.REL_VERSION }}
-      - name: Upload CLI binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ steps.gen-id.outputs.RAD_CLI_ARTIFACT_NAME }}
-          path: |
-            ./dist/linux_amd64/release/rad
+      # - name: Build and Push container images
+      #   run: |
+      #     make build && make docker-build && make docker-push
+      #   env:
+      #     DOCKER_REGISTRY: ${{ env.CONTAINER_REGISTRY }}
+      #     DOCKER_TAG_VERSION: ${{ env.REL_VERSION }}
+      # - name: Upload CLI binary
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: ${{ steps.gen-id.outputs.RAD_CLI_ARTIFACT_NAME }}
+      #     path: |
+      #       ./dist/linux_amd64/release/rad
       - uses: marocchino/sticky-pull-request-comment@v2
         if: success() && env.PR_NUMBER != ''
         continue-on-error: true
