@@ -608,6 +608,16 @@ jobs:
           append: true
           message: |
             :x: ${{ matrix.name }} functional test failed. Please check [the logs](${{ env.ACTION_LINK }}) for more details
+      - uses: marocchino/sticky-pull-request-comment@v2
+        if: cancelled() && env.PR_NUMBER != ''
+        continue-on-error: true
+        with:
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          header: teststatus-${{ github.run_id }}
+          number: ${{ env.PR_NUMBER }}
+          append: true
+          message: |
+            :x: ${{ matrix.name }} functional test cancelled. Please check [the logs](${{ env.ACTION_LINK }}) for more details
       - uses: LouisBrunner/checks-action@v1.6.1
         if: always()
         with:
