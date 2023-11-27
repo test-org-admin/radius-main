@@ -1,0 +1,11 @@
+name: 'Approve Functional Tests'
+on:
+  pull_request:
+    branches:
+      - main
+      - features/*
+      - release/*
+jobs:
+  save_pr_as_artifact:
+      name: 'Approve Functional Tests'
+      uses: test-org-admin/radius-main/.github/workflows/save-pr-as-artifact.yaml@main
