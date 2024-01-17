@@ -1,6 +1,6 @@
 # Contributing Pull Requests
 
-## What to work on...
+## What to work on
 
 We welcome small pull request contributions from anyone (docs improvements, bug fixes, minor features.) as long as they follow a few guidelines:
 
