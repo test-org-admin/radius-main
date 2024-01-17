@@ -3,7 +3,6 @@ on:
   pull_request:
     paths:
       - 'versions.yaml'
-      - '!**/*'
     branches:
       - main
       - features/*
@@ -18,11 +17,19 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-    - name: Get number of changed files
+
+    - name: Get changed files
+      uses: tj-actions/changed-files@v41
+      id: changed-files
+
+    - name: List all changed files
+      env:
+        ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
       run: |
-        git fetch origin ${{ github.base_ref }}
-        CHANGED_FILES=$(git diff --numstat ${{ github.base_ref }}...${{ github.sha }} | wc -l)
-        echo "Number of changed files: $CHANGED_FILES"
+        for file in "$ALL_CHANGED_FILES"; do
+          echo "$file was changed"
+        done
+        
     - name: Login as the GitHub App
       uses: tibdex/github-app-token@v1
       id: get_installation_token
