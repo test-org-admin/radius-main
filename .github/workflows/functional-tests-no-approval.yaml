@@ -2,8 +2,8 @@ name: 'Skip Functional Tests'
 on:
   pull_request:
     paths:
-      - '!**/*'
       - 'versions.yaml'
+      - '!**/*'
     branches:
       - main
       - features/*
