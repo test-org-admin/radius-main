@@ -1,5 +1,5 @@
 # Contributing Pull Requests
-abc
+abc.
 
 ## What to work on
 
