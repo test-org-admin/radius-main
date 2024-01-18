@@ -29,8 +29,7 @@ jobs:
         for file in "$ALL_CHANGED_FILES"; do
           echo "$file was changed"
         done
-        echo "count is ${{ steps.changed-files.outputs.all_changed_files_count }}"
-        echo "::set-env name=NUM_CHANGED_FILES::${{ steps.changed-files.outputs.all_changed_files_count }}"
+        echo "NUM_CHANGED_FILES=${{ steps.changed-files.outputs.all_changed_files_count }}" >> $GITHUB_ENV
   
     - name: Login as the GitHub App
       uses: tibdex/github-app-token@v1
@@ -40,7 +39,7 @@ jobs:
         app_id: ${{ env.FUNCTIONAL_TEST_APP_ID }}
         private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
     - uses: LouisBrunner/checks-action@v1.6.1
-      if: always()
+      if: ${{ env.NUM_CHANGED_FILES }} == 1
       with:
         token: ${{ steps.get_installation_token.outputs.token }}
         name: 'Functional Test Run'
