@@ -24,9 +24,14 @@ jobs:
 
     - name: List all changed files
       env:
-        NUM_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files_count }}
-      run: echo "NUM_CHANGED_FILES=$NUM_CHANGED_FILES" >> $GITHUB_ENV
-        
+        ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+      run: |
+        for file in "$ALL_CHANGED_FILES"; do
+          echo "$file was changed"
+        done
+        echo "count is ${{ steps.changed-files.outputs.all_changed_files_count }}"
+        echo "::set-env name=NUM_CHANGED_FILES::${{ steps.changed-files.outputs.all_changed_files_count }}"
+  
     - name: Login as the GitHub App
       uses: tibdex/github-app-token@v1
       id: get_installation_token
