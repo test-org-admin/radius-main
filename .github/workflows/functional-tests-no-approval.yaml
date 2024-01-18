@@ -34,12 +34,12 @@ jobs:
     - name: Login as the GitHub App
       uses: tibdex/github-app-token@v1
       id: get_installation_token
-      if: ${{ env.NUM_CHANGED_FILES }} == 1
+      if: ${{ env.NUM_CHANGED_FILES }} == '1'
       with: 
         app_id: ${{ env.FUNCTIONAL_TEST_APP_ID }}
         private_key: ${{ secrets.FUNCTIONAL_TEST_APP_PRIVATE_KEY }}
     - uses: LouisBrunner/checks-action@v1.6.1
-      if: ${{ env.NUM_CHANGED_FILES }} == 1
+      if: ${{ env.NUM_CHANGED_FILES }} == '1'
       with:
         token: ${{ steps.get_installation_token.outputs.token }}
         name: 'Functional Test Run'
