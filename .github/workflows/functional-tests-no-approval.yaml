@@ -24,7 +24,7 @@ jobs:
 
     - name: List all changed files
       env:
-        NUM_CHANGED_FILES: ${{ steps.changed_files.outputs.changed_files }}
+        NUM_CHANGED_FILES: ${{ steps.changed_files.outputs.all_changed_files_count }}
       run: echo "NUM_CHANGED_FILES=$NUM_CHANGED_FILES" >> $GITHUB_ENV
         
     - name: Login as the GitHub App
