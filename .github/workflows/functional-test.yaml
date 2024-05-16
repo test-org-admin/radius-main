@@ -378,179 +378,179 @@ jobs:
           repository: radius-project/samples
           ref: refs/heads/edge
           path: samples
-      - name: Set up Go ${{ env.GOVER }}
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GOVER }}
-      - name: Get Go Cache path
-        id: go-cache-paths
-        run: |
-          echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-          echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ${{ steps.go-cache-paths.outputs.go-build }}
-            ${{ steps.go-cache-paths.outputs.go-mod }}
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - name: Download rad CLI
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.RAD_CLI_ARTIFACT_NAME }}
-          path: bin
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_SP_TESTS_APPID }}
-          tenant-id: ${{ secrets.AZURE_SP_TESTS_TENANTID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTIONID_TESTS }}
-      - uses: marocchino/sticky-pull-request-comment@v2
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :hourglass: Starting ${{ matrix.name }} functional tests...
-      - name: Create azure resource group - ${{ env.AZURE_TEST_RESOURCE_GROUP }}
-        run: |
-          current_time=$(date +%s)
-          az group create \
-            --location ${{ env.AZURE_LOCATION }} \
-            --name $RESOURCE_GROUP \
-            --subscription ${{ secrets.AZURE_SUBSCRIPTIONID_TESTS }} \
-            --tags creationTime=$current_time
-          while [ $(az group exists --name $RESOURCE_GROUP) = false ]; do sleep 2; done
-        env:
-          RESOURCE_GROUP: ${{ env.AZURE_TEST_RESOURCE_GROUP }}
-      - uses: azure/setup-helm@v4
-        with:
-          version: ${{ env.HELM_VER }}
-      - name: Create KinD cluster
-        run: |
-          curl -sSLo "kind" "https://github.com/kubernetes-sigs/kind/releases/download/${{ env.KIND_VER }}/kind-linux-amd64"
-          chmod +x ./kind
+      # - name: Set up Go ${{ env.GOVER }}
+      #   uses: actions/setup-go@v5
+      #   with:
+      #     go-version: ${{ env.GOVER }}
+      # - name: Get Go Cache path
+      #   id: go-cache-paths
+      #   run: |
+      #     echo "go-build=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+      #     echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+      # - uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ${{ steps.go-cache-paths.outputs.go-build }}
+      #       ${{ steps.go-cache-paths.outputs.go-mod }}
+      #     key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-go-
+      # - name: Download rad CLI
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ${{ env.RAD_CLI_ARTIFACT_NAME }}
+      #     path: bin
+      # - name: Login to Azure
+      #   uses: azure/login@v2
+      #   with:
+      #     client-id: ${{ secrets.AZURE_SP_TESTS_APPID }}
+      #     tenant-id: ${{ secrets.AZURE_SP_TESTS_TENANTID }}
+      #     subscription-id: ${{ secrets.AZURE_SUBSCRIPTIONID_TESTS }}
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :hourglass: Starting ${{ matrix.name }} functional tests...
+      # - name: Create azure resource group - ${{ env.AZURE_TEST_RESOURCE_GROUP }}
+      #   run: |
+      #     current_time=$(date +%s)
+      #     az group create \
+      #       --location ${{ env.AZURE_LOCATION }} \
+      #       --name $RESOURCE_GROUP \
+      #       --subscription ${{ secrets.AZURE_SUBSCRIPTIONID_TESTS }} \
+      #       --tags creationTime=$current_time
+      #     while [ $(az group exists --name $RESOURCE_GROUP) = false ]; do sleep 2; done
+      #   env:
+      #     RESOURCE_GROUP: ${{ env.AZURE_TEST_RESOURCE_GROUP }}
+      # - uses: azure/setup-helm@v4
+      #   with:
+      #     version: ${{ env.HELM_VER }}
+      # - name: Create KinD cluster
+      #   run: |
+      #     curl -sSLo "kind" "https://github.com/kubernetes-sigs/kind/releases/download/${{ env.KIND_VER }}/kind-linux-amd64"
+      #     chmod +x ./kind
 
-          # Populate the following environment variables for Azure workload identity from secrets.
-          # AZURE_OIDC_ISSUER_PUBLIC_KEY
-          # AZURE_OIDC_ISSUER_PRIVATE_KEY
-          # AZURE_OIDC_ISSUER
-          eval "export $(echo "${{ secrets.FUNCTEST_AZURE_OIDC_JSON }}" | jq -r 'to_entries | map("\(.key)=\(.value)") | @sh')"
+      #     # Populate the following environment variables for Azure workload identity from secrets.
+      #     # AZURE_OIDC_ISSUER_PUBLIC_KEY
+      #     # AZURE_OIDC_ISSUER_PRIVATE_KEY
+      #     # AZURE_OIDC_ISSUER
+      #     eval "export $(echo "${{ secrets.FUNCTEST_AZURE_OIDC_JSON }}" | jq -r 'to_entries | map("\(.key)=\(.value)") | @sh')"
 
-          AUTHKEY=$(echo -n "${{ github.actor }}:${{ secrets.GH_RAD_CI_BOT_PAT }}" | base64)
-          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"${AUTHKEY}\"}}}" > "./ghcr_secret.json"
+      #     AUTHKEY=$(echo -n "${{ github.actor }}:${{ secrets.GH_RAD_CI_BOT_PAT }}" | base64)
+      #     echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"${AUTHKEY}\"}}}" > "./ghcr_secret.json"
 
-          # Create KinD cluster with OIDC Issuer keys
-          echo $AZURE_OIDC_ISSUER_PUBLIC_KEY | base64 -d > sa.pub
-          echo $AZURE_OIDC_ISSUER_PRIVATE_KEY | base64 -d > sa.key
-          cat <<EOF | ./kind create cluster --name radius --config=-
-          kind: Cluster
-          apiVersion: kind.x-k8s.io/v1alpha4
-          nodes:
-          - role: control-plane
-            extraMounts:
-              - hostPath: ./sa.pub
-                containerPath: /etc/kubernetes/pki/sa.pub
-              - hostPath: ./sa.key
-                containerPath: /etc/kubernetes/pki/sa.key
-              - hostPath: ./ghcr_secret.json
-                containerPath: /var/lib/kubelet/config.json
-            kubeadmConfigPatches:
-            - |
-              kind: ClusterConfiguration
-              apiServer:
-                extraArgs:
-                  service-account-issuer: $AZURE_OIDC_ISSUER
-                  service-account-key-file: /etc/kubernetes/pki/sa.pub
-                  service-account-signing-key-file: /etc/kubernetes/pki/sa.key
-              controllerManager:
-                extraArgs:
-                  service-account-private-key-file: /etc/kubernetes/pki/sa.key
-          EOF
-      - name: Install dapr into cluster
-        run: |
-          wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s ${{ env.DAPR_VER }}
-          dapr init -k --wait --timeout 600 --runtime-version ${{ env.DAPR_VER }} --dashboard-version ${{ env.DAPR_DASHBOARD_VER }}
-      - name: Install Azure Keyvault CSI driver chart
-        run: |
-          helm repo add csi-secrets-store-provider-azure https://azure.github.io/secrets-store-csi-driver-provider-azure/charts
-          helm install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --version ${{ env.AZURE_KEYVAULT_CSI_DRIVER_VER }}
-      - name: Install azure workload identity webhook chart
-        run: |
-          helm repo add azure-workload-identity https://azure.github.io/azure-workload-identity/charts
-          helm install workload-identity-webhook azure-workload-identity/workload-identity-webhook --namespace radius-default --create-namespace --version ${{ env.AZURE_WORKLOAD_IDENTITY_WEBHOOK_VER }} --set azureTenantID=${{ secrets.AZURE_SP_TESTS_TENANTID }}
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download Bicep
-        run: |
-          chmod +x ./bin/rad
-          export PATH=$GITHUB_WORKSPACE/bin:$PATH
-          which rad || { echo "cannot find rad"; exit 1; }
-          rad bicep download
-          rad version
-      - name: Install gotestsum (test reporting tool)
-        run: |
-          go install gotest.tools/gotestsum@v${{ env.GOTESTSUM_VER }}
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: failure() && env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :x: Test tool installation for ${{ matrix.name }} failed. Please check [the logs](${{ env.ACTION_LINK }}) for more details
-      - name: Install Radius
-        run: |
-          export PATH=$GITHUB_WORKSPACE/bin:$PATH
-          which rad || { echo "cannot find rad"; exit 1; }
+      #     # Create KinD cluster with OIDC Issuer keys
+      #     echo $AZURE_OIDC_ISSUER_PUBLIC_KEY | base64 -d > sa.pub
+      #     echo $AZURE_OIDC_ISSUER_PRIVATE_KEY | base64 -d > sa.key
+      #     cat <<EOF | ./kind create cluster --name radius --config=-
+      #     kind: Cluster
+      #     apiVersion: kind.x-k8s.io/v1alpha4
+      #     nodes:
+      #     - role: control-plane
+      #       extraMounts:
+      #         - hostPath: ./sa.pub
+      #           containerPath: /etc/kubernetes/pki/sa.pub
+      #         - hostPath: ./sa.key
+      #           containerPath: /etc/kubernetes/pki/sa.key
+      #         - hostPath: ./ghcr_secret.json
+      #           containerPath: /var/lib/kubelet/config.json
+      #       kubeadmConfigPatches:
+      #       - |
+      #         kind: ClusterConfiguration
+      #         apiServer:
+      #           extraArgs:
+      #             service-account-issuer: $AZURE_OIDC_ISSUER
+      #             service-account-key-file: /etc/kubernetes/pki/sa.pub
+      #             service-account-signing-key-file: /etc/kubernetes/pki/sa.key
+      #         controllerManager:
+      #           extraArgs:
+      #             service-account-private-key-file: /etc/kubernetes/pki/sa.key
+      #     EOF
+      # - name: Install dapr into cluster
+      #   run: |
+      #     wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash -s ${{ env.DAPR_VER }}
+      #     dapr init -k --wait --timeout 600 --runtime-version ${{ env.DAPR_VER }} --dashboard-version ${{ env.DAPR_DASHBOARD_VER }}
+      # - name: Install Azure Keyvault CSI driver chart
+      #   run: |
+      #     helm repo add csi-secrets-store-provider-azure https://azure.github.io/secrets-store-csi-driver-provider-azure/charts
+      #     helm install csi csi-secrets-store-provider-azure/csi-secrets-store-provider-azure --version ${{ env.AZURE_KEYVAULT_CSI_DRIVER_VER }}
+      # - name: Install azure workload identity webhook chart
+      #   run: |
+      #     helm repo add azure-workload-identity https://azure.github.io/azure-workload-identity/charts
+      #     helm install workload-identity-webhook azure-workload-identity/workload-identity-webhook --namespace radius-default --create-namespace --version ${{ env.AZURE_WORKLOAD_IDENTITY_WEBHOOK_VER }} --set azureTenantID=${{ secrets.AZURE_SP_TESTS_TENANTID }}
+      # - name: Login to GitHub Container Registry
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ghcr.io
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Download Bicep
+      #   run: |
+      #     chmod +x ./bin/rad
+      #     export PATH=$GITHUB_WORKSPACE/bin:$PATH
+      #     which rad || { echo "cannot find rad"; exit 1; }
+      #     rad bicep download
+      #     rad version
+      # - name: Install gotestsum (test reporting tool)
+      #   run: |
+      #     go install gotest.tools/gotestsum@v${{ env.GOTESTSUM_VER }}
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: failure() && env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :x: Test tool installation for ${{ matrix.name }} failed. Please check [the logs](${{ env.ACTION_LINK }}) for more details
+      # - name: Install Radius
+      #   run: |
+      #     export PATH=$GITHUB_WORKSPACE/bin:$PATH
+      #     which rad || { echo "cannot find rad"; exit 1; }
 
-          echo "*** Installing Radius to Kubernetes ***"
-          rad install kubernetes \
-            --chart ${{ env.RADIUS_CHART_LOCATION }} \
-            --set rp.image=${{ env.CONTAINER_REGISTRY }}/applications-rp,rp.tag=${{ env.REL_VERSION }},controller.image=${{ env.CONTAINER_REGISTRY }}/controller,controller.tag=${{ env.REL_VERSION }},ucp.image=${{ env.CONTAINER_REGISTRY }}/ucpd,ucp.tag=${{ env.REL_VERSION }},de.image=${{ env.DE_IMAGE }},de.tag=${{ env.DE_TAG }}
+      #     echo "*** Installing Radius to Kubernetes ***"
+      #     rad install kubernetes \
+      #       --chart ${{ env.RADIUS_CHART_LOCATION }} \
+      #       --set rp.image=${{ env.CONTAINER_REGISTRY }}/applications-rp,rp.tag=${{ env.REL_VERSION }},controller.image=${{ env.CONTAINER_REGISTRY }}/controller,controller.tag=${{ env.REL_VERSION }},ucp.image=${{ env.CONTAINER_REGISTRY }}/ucpd,ucp.tag=${{ env.REL_VERSION }},de.image=${{ env.DE_IMAGE }},de.tag=${{ env.DE_TAG }}
 
-          echo "*** Create workspace, group and environment for test ***"
-          rad workspace create kubernetes
-          rad group create kind-radius
-          rad group switch kind-radius
+      #     echo "*** Create workspace, group and environment for test ***"
+      #     rad workspace create kubernetes
+      #     rad group create kind-radius
+      #     rad group switch kind-radius
 
-          # The functional test is designed to use default namespace. So you must create the environment for default namespace.
-          rad env create kind-radius --namespace default
-          rad env switch kind-radius
+      #     # The functional test is designed to use default namespace. So you must create the environment for default namespace.
+      #     rad env create kind-radius --namespace default
+      #     rad env switch kind-radius
 
-          echo "*** Configuring Azure provider ***"
-          rad env update kind-radius --azure-subscription-id ${{ secrets.AZURE_SUBSCRIPTIONID_TESTS }} \
-            --azure-resource-group ${{ env.AZURE_TEST_RESOURCE_GROUP }}
-          rad credential register azure --client-id ${{ secrets.AZURE_SP_TESTS_APPID }} \
-            --client-secret ${{ secrets.INTEGRATION_TEST_SP_PASSWORD }} \
-            --tenant-id ${{ secrets.AZURE_SP_TESTS_TENANTID }}
+      #     echo "*** Configuring Azure provider ***"
+      #     rad env update kind-radius --azure-subscription-id ${{ secrets.AZURE_SUBSCRIPTIONID_TESTS }} \
+      #       --azure-resource-group ${{ env.AZURE_TEST_RESOURCE_GROUP }}
+      #     rad credential register azure --client-id ${{ secrets.AZURE_SP_TESTS_APPID }} \
+      #       --client-secret ${{ secrets.INTEGRATION_TEST_SP_PASSWORD }} \
+      #       --tenant-id ${{ secrets.AZURE_SP_TESTS_TENANTID }}
 
-          echo "*** Configuring AWS provider ***"
-          rad env update kind-radius --aws-region ${{ env.AWS_REGION }} --aws-account-id ${{ secrets.FUNCTEST_AWS_ACCOUNT_ID }}
-          rad credential register aws \
-            --access-key-id ${{ secrets.FUNCTEST_AWS_ACCESS_KEY_ID }} --secret-access-key ${{ secrets.FUNCTEST_AWS_SECRET_ACCESS_KEY }}
-      - uses: marocchino/sticky-pull-request-comment@v2
-        if: failure() && env.PR_NUMBER != ''
-        continue-on-error: true
-        with:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          header: teststatus-${{ github.run_id }}
-          number: ${{ env.PR_NUMBER }}
-          append: true
-          message: |
-            :x: Failed to install Radius for ${{ matrix.name }} functional test. Please check [the logs](${{ env.ACTION_LINK }}) for more details
-      - name: Publish Terraform test recipes
-        run: |
-          make publish-test-terraform-recipes
+      #     echo "*** Configuring AWS provider ***"
+      #     rad env update kind-radius --aws-region ${{ env.AWS_REGION }} --aws-account-id ${{ secrets.FUNCTEST_AWS_ACCOUNT_ID }}
+      #     rad credential register aws \
+      #       --access-key-id ${{ secrets.FUNCTEST_AWS_ACCESS_KEY_ID }} --secret-access-key ${{ secrets.FUNCTEST_AWS_SECRET_ACCESS_KEY }}
+      # - uses: marocchino/sticky-pull-request-comment@v2
+      #   if: failure() && env.PR_NUMBER != ''
+      #   continue-on-error: true
+      #   with:
+      #     GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+      #     header: teststatus-${{ github.run_id }}
+      #     number: ${{ env.PR_NUMBER }}
+      #     append: true
+      #     message: |
+      #       :x: Failed to install Radius for ${{ matrix.name }} functional test. Please check [the logs](${{ env.ACTION_LINK }}) for more details
+      # - name: Publish Terraform test recipes
+      #   run: |
+      #     make publish-test-terraform-recipes
       - name: Run functional tests that do not use cloud resources
         if: github.event_name == 'repository_dispatch' || (github.event_name == 'schedule' && github.repository == 'radius-project/radius')
         run: |
