@@ -334,8 +334,6 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         name: [ucp,kubernetes,shared,msgrp,daprrp,samples,cli]
-        name-cloud: [ucp,shared]
-        name-noncloud: [ucp,kubernetes,shared,msgrp,daprrp,samples,cli]
         include:
           # datastorerp functional tests need the larger VM.
           - os: ubuntu-latest-m
@@ -575,7 +573,7 @@ jobs:
           # AZURE_MSSQL_PASSWORD
           eval "export $(echo "${{ secrets.FUNCTEST_PREPROVISIONED_RESOURCE_JSON }}" | jq -r 'to_entries | map("\(.key)=\(.value)") | @sh')"
 
-          make test-functional-${{ matrix.name-noncloud }}-noncloud
+          make test-functional-${{ matrix.name }}-noncloud
       - name: Run functional tests that use cloud resources
         if: github.event_name == 'workflow_run'
         run: |
@@ -596,7 +594,7 @@ jobs:
           # AZURE_MSSQL_PASSWORD
           eval "export $(echo "${{ secrets.FUNCTEST_PREPROVISIONED_RESOURCE_JSON }}" | jq -r 'to_entries | map("\(.key)=\(.value)") | @sh')"
 
-          make test-functional-${{ matrix.name-cloud }}-cloud
+          make test-functional-${{ matrix.name }}-cloud
         env:
           DOCKER_REGISTRY: ${{ env.CONTAINER_REGISTRY }}
           TEST_TIMEOUT: ${{ env.FUNCTIONALTEST_TIMEOUT }}
