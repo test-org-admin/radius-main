@@ -24,6 +24,17 @@ permissions:
 on:
   # Enable manual trigger
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - release/*
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - main
+      - features/*
+      - release/*
   schedule:
     # Run every 4 hours on weekdays.
     - cron: "30 0,4,8,12,16,20 * * 1-5"
