@@ -1,4 +1,4 @@
-# Contributing
+# Contributing..
 
 Radius is in an early phase of development right now. We welcome feedback in the form of issues that comes from usage and is aligned with the current scope and goals of the project. 
 
